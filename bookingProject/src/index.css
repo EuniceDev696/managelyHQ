@@ -1,0 +1,222 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Poppins:wght@300;400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --brand-color: #0ea271;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-page text-body antialiased;
+  }
+
+  .dark body {
+    @apply bg-ink-950 text-pearl-100;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-page;
+  }
+
+  .dark :focus-visible {
+    @apply ring-offset-ink-950;
+  }
+}
+
+@layer utilities {
+  .section-shell {
+    @apply relative py-16 sm:py-20;
+  }
+
+  .section-shell-lg {
+    @apply relative py-20 sm:py-24;
+  }
+
+  .section-container {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+  }
+
+  .section-heading {
+    @apply flex flex-col gap-3 text-center;
+  }
+
+  .section-eyebrow {
+    @apply text-sm font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-400;
+  }
+
+  .section-title {
+    @apply text-4xl font-bold leading-[1.15] tracking-[0.01em] text-strong sm:text-5xl dark:text-pearl-100;
+  }
+
+  .section-copy {
+    @apply mx-auto max-w-2xl text-base leading-7 text-body dark:text-pearl-100/75;
+  }
+
+  /* Global dark-mode semantic token remap for components using light-mode color utilities. */
+  .dark .text-strong {
+    @apply text-pearl-100;
+  }
+
+  .dark .text-body {
+    @apply text-pearl-100/75;
+  }
+
+  .dark .text-subdued {
+    @apply text-pearl-100/60;
+  }
+
+  .dark .bg-surface {
+    @apply bg-ink-900/80;
+  }
+
+  .dark .bg-muted {
+    @apply bg-ink-900/70;
+  }
+  .surface-card {
+    @apply rounded-2xl border border-gray-200/70 bg-white shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg dark:border-white/10 dark:bg-white/5;
+  }
+
+  .ambient-bg {
+    background-image: radial-gradient(circle at 10% 10%, rgba(57, 214, 166, 0.12), transparent 45%),
+      radial-gradient(circle at 90% 20%, rgba(42, 76, 255, 0.12), transparent 50%),
+      radial-gradient(circle at 50% 90%, rgba(233, 193, 106, 0.1), transparent 55%);
+    animation: ambientShift 14s ease-in-out infinite;
+  }
+
+  .texture-layer {
+    background-image: linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 40%),
+      linear-gradient(300deg, rgba(255, 255, 255, 0.06), transparent 35%);
+    mix-blend-mode: soft-light;
+  }
+
+  .animate-marquee {
+    animation: marquee 28s linear infinite;
+  }
+
+  .glass-card {
+    @apply border border-border bg-white/85 shadow-md backdrop-blur-xl dark:border-white/10 dark:bg-white/5;
+  }
+
+  .dark .glass-card {
+    @apply shadow-glow;
+  }
+
+  .lux-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+
+  .lux-button-primary {
+    @apply lux-button bg-primary-600 px-7 py-3.5 text-white shadow-md hover:-translate-y-0.5 hover:brightness-95 hover:shadow-lg dark:bg-primary-500 dark:hover:brightness-110;
+    background-color: var(--brand-color);
+    box-shadow: 0 18px 44px -26px color-mix(in srgb, var(--brand-color) 62%, #000 38%);
+  }
+
+  .lux-button-secondary {
+    @apply lux-button border border-border bg-surface text-strong shadow-sm hover:-translate-y-0.5 hover:shadow-md dark:border-white/15 dark:bg-white/5 dark:text-pearl-100;
+  }
+
+  .dark .lux-button-secondary {
+    @apply border-white/10 bg-white/5 text-pearl-100;
+  }
+
+  .brand-dashboard :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-color) 24%, transparent);
+    border-color: color-mix(in srgb, var(--brand-color) 58%, transparent);
+  }
+
+  .brand-dashboard .text-primary-400,
+  .brand-dashboard .text-primary-500,
+  .brand-dashboard .text-primary-600,
+  .brand-dashboard .text-primary-700,
+  .brand-dashboard .text-emerald-500,
+  .brand-dashboard .text-emerald-600 {
+    color: var(--brand-color) !important;
+  }
+
+  .brand-dashboard .bg-primary-500,
+  .brand-dashboard .bg-primary-600,
+  .brand-dashboard .bg-emerald-500 {
+    background-color: var(--brand-color) !important;
+  }
+
+  .brand-dashboard .bg-primary-500\/12,
+  .brand-dashboard .bg-primary-500\/14,
+  .brand-dashboard .bg-primary-500\/15,
+  .brand-dashboard .bg-primary-500\/16,
+  .brand-dashboard .bg-primary-500\/18,
+  .brand-dashboard .bg-primary-500\/20,
+  .brand-dashboard .bg-emerald-500\/20,
+  .brand-dashboard .bg-emerald-500\/40,
+  .brand-dashboard .bg-blue-500\/30 {
+    background-color: color-mix(in srgb, var(--brand-color) 20%, transparent) !important;
+  }
+
+  .brand-dashboard .border-primary-500,
+  .brand-dashboard .border-primary-500\/35,
+  .brand-dashboard .border-primary-500\/40,
+  .brand-dashboard .border-primary-500\/45,
+  .brand-dashboard .border-emerald-500\/40,
+  .brand-dashboard .border-emerald-500\/60 {
+    border-color: color-mix(in srgb, var(--brand-color) 42%, transparent) !important;
+  }
+
+  .brand-dashboard .ring-primary-500\/40,
+  .brand-dashboard .ring-emerald-500\/20,
+  .brand-dashboard .ring-emerald-500\/40 {
+    --tw-ring-color: color-mix(in srgb, var(--brand-color) 32%, transparent) !important;
+  }
+
+  .brand-dashboard .hover\:border-primary-500\/40:hover,
+  .brand-dashboard .hover\:border-emerald-500:hover,
+  .brand-dashboard .hover\:border-emerald-500\/40:hover {
+    border-color: color-mix(in srgb, var(--brand-color) 52%, transparent) !important;
+  }
+
+  .brand-dashboard .hover\:text-primary-600:hover,
+  .brand-dashboard .hover\:text-emerald-500:hover,
+  .brand-dashboard .hover\:text-emerald-600:hover {
+    color: var(--brand-color) !important;
+  }
+
+  .brand-dashboard .focus\:border-emerald-500:focus,
+  .brand-dashboard .focus\:border-primary-500:focus {
+    border-color: color-mix(in srgb, var(--brand-color) 58%, transparent) !important;
+  }
+
+  .brand-dashboard .focus\:ring-2:focus {
+    --tw-ring-color: color-mix(in srgb, var(--brand-color) 24%, transparent);
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes ambientShift {
+  0%,
+  100% {
+    filter: hue-rotate(0deg);
+    opacity: 0.7;
+  }
+
+  50% {
+    filter: hue-rotate(12deg);
+    opacity: 1;
+  }
+}
+
