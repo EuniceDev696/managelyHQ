@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n client,backend,email -c cyan,green,yellow \"cmd /c npm.cmd run dev:client\" \"cmd /c npm.cmd run dev:backend\" \"cmd /c npm.cmd run dev:email\"",
-    "dev:client": "vite",
+    "dev:client": "npm.cmd --prefix frontend run dev",
     "dev:backend": "npm.cmd --prefix backend start",
     "dev:email": "npm.cmd --prefix backend/email-micro-services run dev",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "build": "npm.cmd --prefix frontend run build",
+    "lint": "npm.cmd --prefix frontend run lint",
+    "preview": "npm.cmd --prefix frontend run preview"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

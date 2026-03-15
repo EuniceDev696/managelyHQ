@@ -121,10 +121,6 @@ export default function BookingPage() {
 
   const dates = useMemo(() => Array.from({ length: 7 }, (_, idx) => addDays(new Date(), idx)), [])
 
-  const selectedServiceObj = useMemo(
-    () => services.find((item) => item.id === selectedService) || null,
-    [services, selectedService],
-  )
   const selectedBranch = useMemo(
     () => branchOptions.find((branch) => branch.id === selectedBranchId) || null,
     [branchOptions, selectedBranchId],
@@ -134,47 +130,23 @@ export default function BookingPage() {
     [staff],
   )
   const canChoosePreferredBranch = branchOptions.length > 1
-  const sharedServices = useMemo(
-    () => services.filter((service) => !service.branchId),
-    [services],
+  const visibleServices = services
+  const effectiveSelectedService =
+    visibleServices.some((service) => service.id === selectedService)
+      ? selectedService
+      : visibleServices[0]?.id || ""
+  const effectiveSelectedStaff =
+    selectedStaff && availableStaff.some((member) => member.name === selectedStaff) ? selectedStaff : ""
+  const selectedServiceObj = useMemo(
+    () => services.find((item) => item.id === effectiveSelectedService) || null,
+    [effectiveSelectedService, services],
   )
-  const branchSpecificServices = useMemo(
-    () =>
-      branches
-        .map((branch) => ({
-          ...branch,
-          services: services.filter((service) => service.branchId === branch.id),
-        }))
-        .filter((branch) => branch.services.length > 0),
-    [branches, services],
-  )
-  const visibleServices = useMemo(() => {
-    return services
-  }, [services])
-
-  useEffect(() => {
-    if (!visibleServices.length) {
-      if (selectedService) setSelectedService("")
-      return
-    }
-
-    if (!visibleServices.some((service) => service.id === selectedService)) {
-      setSelectedService(visibleServices[0]?.id || "")
-    }
-  }, [visibleServices, selectedService])
-
-  useEffect(() => {
-    if (!selectedStaff) return
-    if (!availableStaff.some((member) => member.name === selectedStaff)) {
-      setSelectedStaff("")
-    }
-  }, [availableStaff, selectedStaff])
 
   const unavailable = useMemo(() => new Set(bookingsForDay.map((item) => item.time)), [bookingsForDay])
   const brandColor = business?.brandColor || DEFAULT_BRAND
 
   const nextFromStep1 = () => {
-    if (!selectedService) return setError("Select a service to continue.")
+    if (!effectiveSelectedService) return setError("Select a service to continue.")
     if (canChoosePreferredBranch && !selectedBranchId) return setError("Select a preferred branch to continue.")
     setError("")
     setStep(2)
@@ -202,7 +174,7 @@ export default function BookingPage() {
           phone: customer.phone,
           serviceId: selectedServiceObj.id,
           service: selectedServiceObj.name,
-          staff: selectedStaff || "Any available staff",
+          staff: effectiveSelectedStaff || "Any available staff",
           branchId: effectiveBranchId || undefined,
           date: selectedDate,
           time: selectedTime,
@@ -325,12 +297,12 @@ export default function BookingPage() {
                   <button
                     key={service.id}
                     className={`rounded-2xl border p-4 text-left transition ${
-                      selectedService === service.id
+                      effectiveSelectedService === service.id
                         ? "font-medium"
                         : "border-white/50 bg-white/70 dark:border-white/10 dark:bg-white/5"
                     }`}
                     style={
-                      selectedService === service.id
+                      effectiveSelectedService === service.id
                         ? {
                             borderColor: hexToRgba(brandColor, 0.55),
                             backgroundColor: hexToRgba(brandColor, 0.16),
@@ -381,13 +353,13 @@ export default function BookingPage() {
                 <div
                   className="mt-2 rounded-2xl border bg-white/80 p-1.5 shadow-sm transition-all duration-200 dark:bg-white/10"
                   style={{
-                    borderColor: selectedStaff ? hexToRgba(brandColor, 0.45) : undefined,
-                    boxShadow: selectedStaff ? `0 0 0 2px ${hexToRgba(brandColor, 0.12)}` : undefined,
+                    borderColor: effectiveSelectedStaff ? hexToRgba(brandColor, 0.45) : undefined,
+                    boxShadow: effectiveSelectedStaff ? `0 0 0 2px ${hexToRgba(brandColor, 0.12)}` : undefined,
                   }}
                 >
                   <select
                     className="w-full rounded-xl border border-transparent bg-transparent px-3 py-2.5 text-sm font-medium text-strong outline-none"
-                    value={selectedStaff}
+                    value={effectiveSelectedStaff}
                     onChange={(event) => setSelectedStaff(event.target.value)}
                   >
                     <option value="">Any available staff</option>
@@ -399,8 +371,8 @@ export default function BookingPage() {
                   </select>
                 </div>
                 <p className="mt-1.5 text-xs text-ink-700/70 dark:text-pearl-100/70">
-                  {selectedStaff
-                    ? `Preferred staff: ${selectedStaff}`
+                  {effectiveSelectedStaff
+                    ? `Preferred staff: ${effectiveSelectedStaff}`
                     : "Any available staff will be assigned."}
                 </p>
               </div>

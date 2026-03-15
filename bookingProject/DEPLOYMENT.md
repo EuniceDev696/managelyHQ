@@ -2,7 +2,7 @@
 
 This repo has three deployable parts:
 
-1. `src/` + root Vite app: frontend
+1. `frontend/`: Vite frontend
 2. `backend/`: main API
 3. `backend/email-micro-services/`: email service
 
@@ -17,7 +17,7 @@ This repo has three deployable parts:
 
 Use these templates before deploying:
 
-- Frontend: [`.env.example`](./.env.example)
+- Frontend: [`.env.example`](./frontend/.env.example)
 - API: [`backend/.env.example`](./backend/.env.example)
 - Email microservice: [`backend/email-micro-services/.env.example`](./backend/email-micro-services/.env.example)
 

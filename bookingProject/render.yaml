@@ -70,7 +70,7 @@ services:
   - type: static
     name: bookingproject-web
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_BASE_URL
         sync: false

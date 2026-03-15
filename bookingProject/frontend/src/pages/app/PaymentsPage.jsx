@@ -28,13 +28,6 @@ function AnimatedValue({ value }) {
   return <span ref={ref}>{formatCurrency(display)}</span>;
 }
 
-const statusClass = {
-  success: "bg-emerald-500/20 text-emerald-500",
-  pending: "bg-amber-500/20 text-amber-500",
-  failed: "bg-rose-500/20 text-rose-500",
-  refunded: "bg-blue-500/20 text-blue-500",
-};
-
 const isSubscriptionPayment = (payment) => payment?.metadata?.purpose === "subscription_upgrade";
 const expenseCategories = [
   { value: "rent", label: "Rent" },
@@ -68,6 +61,7 @@ export default function PaymentsPage() {
   const branches = useAppStore((state) => state.branches);
   const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const appointments = useAppStore((state) => state.appointments);
+  const sharedPayments = useAppStore((state) => state.payments);
   const sharedExpenses = useAppStore((state) => state.expenses);
   const setSharedPayments = useAppStore((state) => state.setPayments);
   const setSharedExpenses = useAppStore((state) => state.setExpenses);
@@ -77,10 +71,8 @@ export default function PaymentsPage() {
   const branchScopeId = role === "owner" || role === "admin" || role === "manager" ? selectedBranchId : user?.branchId || "";
   const canChooseBranch = branchAccessEnabled && (role === "owner" || role === "admin" || role === "manager");
   const canManageFinance = role === "owner" || role === "admin" || role === "manager" || role === "staff";
-  const branchNameById = Object.fromEntries(branches.map((branch) => [branch.id, branch.name]));
-  const [payments, setPayments] = useState([]);
-  const [expenses, setExpenses] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const payments = sharedPayments || [];
+  const expenses = sharedExpenses || [];
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [activeBreakdown, setActiveBreakdown] = useState(null);
@@ -104,19 +96,17 @@ export default function PaymentsPage() {
     notes: "",
   });
   const appointmentOptions = appointments.filter((item) => !["cancelled", "no_show"].includes(String(item.status || "").toLowerCase()));
+  const effectivePaymentBranchId = canChooseBranch ? form.branchId || branchScopeId : branchScopeId;
+  const effectiveExpenseBranchId = canChooseBranch ? expenseForm.branchId || branchScopeId : branchScopeId;
 
   const syncPayments = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
     setError("");
     try {
       const rows = await api.getPayments(token, { branchId: branchScopeId });
-      setPayments(rows);
       setSharedPayments(rows);
     } catch (err) {
       setError(err.message || "Could not load payments.");
-    } finally {
-      setLoading(false);
     }
   }, [branchScopeId, setSharedPayments, token]);
 
@@ -124,7 +114,6 @@ export default function PaymentsPage() {
     if (!token) return;
     try {
       const rows = await api.getExpenses(token, { branchId: branchScopeId });
-      setExpenses(rows);
       setSharedExpenses(rows);
     } catch (err) {
       setError(err.message || "Could not load expenses.");
@@ -132,18 +121,34 @@ export default function PaymentsPage() {
   }, [branchScopeId, setSharedExpenses, token]);
 
   useEffect(() => {
-    syncPayments();
-    syncExpenses();
-  }, [syncExpenses, syncPayments]);
+    let cancelled = false;
 
-  useEffect(() => {
-    setForm((prev) => ({ ...prev, branchId: branchScopeId }));
-    setExpenseForm((prev) => ({ ...prev, branchId: branchScopeId }));
-  }, [branchScopeId]);
+    const loadFinanceData = async () => {
+      if (!token) return;
+      setError("");
 
-  useEffect(() => {
-    setExpenses(sharedExpenses || []);
-  }, [sharedExpenses]);
+      try {
+        const [paymentRows, expenseRows] = await Promise.all([
+          api.getPayments(token, { branchId: branchScopeId }),
+          api.getExpenses(token, { branchId: branchScopeId }),
+        ]);
+
+        if (cancelled) return;
+
+        setSharedPayments(paymentRows);
+        setSharedExpenses(expenseRows);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err.message || "Could not load finance data.");
+      }
+    };
+
+    loadFinanceData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchScopeId, setSharedExpenses, setSharedPayments, token]);
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -183,7 +188,7 @@ export default function PaymentsPage() {
       await api.recordManualPayment(token, {
         customerName,
         amount,
-        branchId: canChooseBranch ? form.branchId || null : branchScopeId || null,
+        branchId: effectivePaymentBranchId || null,
         bookingId: form.customerType === "appointment" ? selectedAppointment?.id || null : null,
         customerId: form.customerType === "appointment" ? selectedAppointment?.customerId || null : null,
         method: form.method,
@@ -207,19 +212,6 @@ export default function PaymentsPage() {
     }
   };
 
-  const changeStatus = async (paymentId, status) => {
-    if (!token) return;
-    try {
-      setError("");
-      setNotice("");
-      await api.updatePaymentStatus(token, paymentId, status);
-      await syncPayments();
-      setNotice("Payment status updated.");
-    } catch (err) {
-      setError(err.message || "Could not update payment status.");
-    }
-  };
-
   const createExpense = async () => {
     if (!token) return;
     const amount = Number(expenseForm.amount || 0);
@@ -238,7 +230,7 @@ export default function PaymentsPage() {
       await api.addExpense(token, {
         title: expenseForm.title.trim(),
         amount,
-        branchId: canChooseBranch ? expenseForm.branchId || null : branchScopeId || null,
+        branchId: effectiveExpenseBranchId || null,
         category: expenseForm.category === "other" ? expenseForm.otherCategory.trim() : expenseForm.category,
         spentAt: expenseForm.spentAt || undefined,
         notes: expenseForm.notes,
@@ -248,21 +240,6 @@ export default function PaymentsPage() {
       setNotice("Expense recorded.");
     } catch (err) {
       setError(err.message || "Could not record expense.");
-    }
-  };
-
-  const removeExpense = async (expenseId) => {
-    if (!token) return;
-    const confirmed = window.confirm("Delete this expense?");
-    if (!confirmed) return;
-    try {
-      setError("");
-      setNotice("");
-      await api.deleteExpense(token, expenseId);
-      await syncExpenses();
-      setNotice("Expense deleted.");
-    } catch (err) {
-      setError(err.message || "Could not delete expense.");
     }
   };
 
@@ -525,7 +502,7 @@ export default function PaymentsPage() {
               {branchAccessEnabled ? (
                 <select
                   className="rounded-2xl border border-white/40 bg-white/80 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5"
-                  value={canChooseBranch ? form.branchId : branchScopeId}
+                  value={effectivePaymentBranchId}
                   onChange={(event) => setForm({ ...form, branchId: event.target.value })}
                   disabled={!canChooseBranch}
                 >
@@ -589,7 +566,7 @@ export default function PaymentsPage() {
               {branchAccessEnabled ? (
                 <select
                   className="rounded-2xl border border-white/40 bg-white/80 px-3 py-2 text-sm font-medium text-ink-900 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-white/10 dark:bg-white/5 dark:text-pearl-100"
-                  value={canChooseBranch ? expenseForm.branchId : branchScopeId}
+                  value={effectiveExpenseBranchId}
                   onChange={(event) => setExpenseForm({ ...expenseForm, branchId: event.target.value })}
                   disabled={!canChooseBranch}
                 >

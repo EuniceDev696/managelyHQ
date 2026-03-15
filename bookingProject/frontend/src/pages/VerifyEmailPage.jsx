@@ -45,7 +45,7 @@ export default function VerifyEmailPage() {
         setStatus("error")
         setMessage(error.message || "Verification failed.")
       })
-  }, [login, token])
+  }, [email, login, token])
 
   const handleResend = async () => {
     if (!email) {

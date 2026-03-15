@@ -4,7 +4,7 @@ import { useAppStore } from "../../store/useAppStore"
 import { useAuthStore } from "../../store/useAuthStore"
 import { api } from "../../utils/api"
 import UpgradeRequiredModal from "../../components/common/UpgradeRequiredModal"
-import { canAccessBranchesPlan, getPlan, isPaidPlan } from "../../utils/plans"
+import { canAccessBranchesPlan, getPlan } from "../../utils/plans"
 import { validateRequiredText } from "../../utils/validation"
 
 const roleOptions = [
