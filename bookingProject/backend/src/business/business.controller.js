@@ -169,9 +169,12 @@ exports.register = async (req, res, next) => {
       email: normalizedEmail,
       role: "owner",
     });
+    const token = issueToken(business);
     return res.status(201).json({
       requiresEmailVerification: false,
-      message: "Account created. You can sign in immediately.",
+      message: "Account created. Continue onboarding.",
+      token,
+      business: toAuthUser(business),
     });
   } catch (error) {
     return next(error);

@@ -2,8 +2,9 @@ import { useMemo, useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { Eye, EyeOff } from "lucide-react"
 import { api } from "../utils/api"
+import { useAuthStore } from "../store/useAuthStore"
 import { setPendingPlan } from "../utils/subscriptionCheckout"
-import { setOnboardingCompleted, writeOnboardingData } from "../utils/onboarding"
+import { getPostAuthRedirect, setOnboardingCompleted, writeOnboardingData } from "../utils/onboarding"
 
 const initialForm = {
   fullName: "",
@@ -32,6 +33,7 @@ const validateField = (name, value) => {
 export default function RegisterPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const login = useAuthStore((state) => state.login)
 
   const [form, setForm] = useState(initialForm)
   const [errors, setErrors] = useState({})
@@ -84,8 +86,15 @@ export default function RegisterPage() {
         businessName: form.businessName.trim(),
       })
       setOnboardingCompleted(false)
-      setSubmitSuccess(response.message || "Account created. You can sign in immediately.")
-      navigate("/login", { replace: true })
+      if (response?.token && response?.business) {
+        sessionStorage.setItem("managelyhqAuthFlow", "register")
+        login({ token: response.token, user: response.business })
+        setSubmitSuccess(response.message || "Account created. Continue onboarding.")
+        navigate(getPostAuthRedirect(response.business), { replace: true })
+        return
+      }
+      setSubmitSuccess(response.message || "Account created. Continue onboarding.")
+      navigate("/onboarding", { replace: true })
     } catch (error) {
       setSubmitError(error.message || "Registration failed. Please try again.")
     } finally {
