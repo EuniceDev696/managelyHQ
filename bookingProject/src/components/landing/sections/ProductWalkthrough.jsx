@@ -2,6 +2,7 @@ import { motion } from "framer-motion"
 import { Section, SectionHeading } from "../LandingUI"
 
 const walkthroughVideo = `${import.meta.env.BASE_URL}videos/walkthrough.mp4`
+const walkthroughPoster = `${import.meta.env.BASE_URL}videos/walkthrough-poster.svg`
 
 export default function ProductWalkthrough() {
   return (
@@ -26,7 +27,11 @@ export default function ProductWalkthrough() {
           <video
             className="h-full w-full object-cover"
             src={walkthroughVideo}
+            poster={walkthroughPoster}
             controls
+            autoPlay
+            muted
+            loop
             preload="metadata"
             playsInline
           >

@@ -1,0 +1,40 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="160" y1="80" x2="1450" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F2A37"/>
+      <stop offset="0.55" stop-color="#123444"/>
+      <stop offset="1" stop-color="#1AA37A"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1180 180) rotate(127.875) scale(536.394 684.843)">
+      <stop stop-color="#77FFD6" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#77FFD6" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="338" y="170" width="924" height="560" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="20"/>
+      <feGaussianBlur stdDeviation="30"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.027451 0 0 0 0 0.0705882 0 0 0 0 0.0980392 0 0 0 0.35 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#glow)"/>
+  <g opacity="0.18">
+    <circle cx="193" cy="154" r="96" fill="#77FFD6"/>
+    <circle cx="1425" cy="724" r="132" fill="#E6FFF7"/>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="398" y="210" width="804" height="440" rx="32" fill="#09131A" fill-opacity="0.8"/>
+    <rect x="422" y="234" width="756" height="392" rx="24" fill="#112028"/>
+    <rect x="422" y="234" width="756" height="392" rx="24" stroke="rgba(255,255,255,0.18)"/>
+    <circle cx="800" cy="430" r="74" fill="#1AD29A"/>
+    <path d="M776 385.182C776 377.632 784.352 373.044 790.744 377.113L861.169 421.931C867.071 425.687 867.071 434.313 861.169 438.069L790.744 482.887C784.352 486.956 776 482.368 776 474.818V385.182Z" fill="white"/>
+  </g>
+  <image href="/managelyhq-logo.svg" x="160" y="164" width="72" height="72"/>
+  <text x="250" y="203" fill="white" font-family="Georgia, serif" font-size="46" font-weight="700">ManagelyHQ Demo</text>
+  <text x="160" y="284" fill="#D8FFF2" font-family="Arial, sans-serif" font-size="28">Bookings, staff, and payments in one clean workflow.</text>
+  <text x="160" y="746" fill="#E9FFF8" font-family="Arial, sans-serif" font-size="24">Press play to watch the full product walkthrough.</text>
+</svg>

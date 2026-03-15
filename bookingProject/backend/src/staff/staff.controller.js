@@ -2,11 +2,8 @@ const { randomUUID } = require("crypto");
 const mongoose = require("mongoose");
 const Staff = require("./staff.schema");
 const Booking = require("../bookings/bookings.schema");
-const Business = require("../business/business.schema");
 const { getPlanLimit } = require("../subscription/plan-limits.service");
 const { hashStaffPassword } = require("../auth/staff-password.service");
-const { sendVerificationEmail } = require("../email/email-client");
-const { createEmailVerification, buildVerificationLink } = require("../auth/email-verification.service");
 const { resolveBranchId, getScopedBranchFilter } = require("../branches/branch-access.service");
 
 const normalizeRole = (role) => {
@@ -93,17 +90,15 @@ exports.createStaff = async (req, res, next) => {
       canGrantLoginAccess && email && (req.body.active !== undefined ? Boolean(req.body.active) : true),
     );
     const passwordInput = canGrantLoginAccess && shouldEnableLogin ? String(req.body.password || "staff123") : randomUUID();
-    const verification = email ? createEmailVerification() : null;
-
     const staff = await Staff.create({
       businessId,
       branchId: resolvedBranch.branchId ?? null,
       name,
       email,
-      emailVerified: !email,
-      emailVerificationTokenHash: verification?.tokenHash || "",
-      emailVerificationOtpHash: verification?.otpHash || "",
-      emailVerificationExpiresAt: verification?.expiresAt || null,
+      emailVerified: true,
+      emailVerificationTokenHash: "",
+      emailVerificationOtpHash: "",
+      emailVerificationExpiresAt: null,
       password: await hashStaffPassword(passwordInput),
       mustChangePassword: shouldEnableLogin,
       role: normalizeRole(req.body.role),
@@ -115,18 +110,6 @@ exports.createStaff = async (req, res, next) => {
 
     const output = staff.toObject();
     delete output.password;
-
-    if (shouldEnableLogin && email) {
-      const business = await Business.findById(businessId).select("name");
-      sendVerificationEmail({
-        to: email,
-        companyName: business?.name || "ManagelyHQ",
-        staffName: staff.name,
-        temporaryPassword: passwordInput,
-        verificationLink: buildVerificationLink(verification.token, email),
-        verificationOtp: verification.otp,
-      });
-    }
 
     return res.status(201).json(output);
   } catch (error) {

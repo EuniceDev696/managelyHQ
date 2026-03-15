@@ -84,11 +84,8 @@ export default function RegisterPage() {
         businessName: form.businessName.trim(),
       })
       setOnboardingCompleted(false)
-      setSubmitSuccess(response.message || "Account created. Verify your email before signing in.")
-      navigate("/check-email", {
-        replace: true,
-        state: { email: form.email.trim() },
-      })
+      setSubmitSuccess(response.message || "Account created. You can sign in immediately.")
+      navigate("/login", { replace: true })
     } catch (error) {
       setSubmitError(error.message || "Registration failed. Please try again.")
     } finally {

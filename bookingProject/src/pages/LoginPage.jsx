@@ -16,7 +16,6 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
-  const needsVerification = error?.toLowerCase().includes("verify your email")
   const nextFromState = location.state?.from?.pathname
 
   const handleSubmit = async (event) => {
@@ -127,19 +126,6 @@ export default function LoginPage() {
               />
             </div>
             {error && <p className="text-sm text-rose-500">{error}</p>}
-            {needsVerification ? (
-              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-ink-800/75 dark:text-pearl-100/75">
-                Email confirmation is part of registration only. Finish verification from the check-email page, then come back here to sign in.
-                <div className="mt-3">
-                  <Link
-                    to={`/check-email?email=${encodeURIComponent(form.email.trim())}`}
-                    className="text-emerald-500 underline"
-                  >
-                    Go to email confirmation
-                  </Link>
-                </div>
-              </div>
-            ) : null}
             <button className="lux-button-primary w-full" disabled={submitting}>
               {submitting ? "Signing in..." : loginMode === "owner" ? "Log in as owner" : "Log in as staff"}
             </button>

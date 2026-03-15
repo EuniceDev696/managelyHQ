@@ -17,13 +17,6 @@ const rateLimit = require("../middleware/rate-limit.middleware");
 const { auditLog } = require("../utils/audit-log");
 const { getScopedBranchFilter } = require("../branches/branch-access.service");
 const { canAccessBranches } = require("../subscription/plan-limits.service");
-const { sendOwnerWelcomeEmail, sendVerificationEmail } = require("../email/email-client");
-const {
-  createEmailVerification,
-  hashEmailVerificationToken,
-  hashEmailVerificationOtp,
-  buildVerificationLink,
-} = require("../auth/email-verification.service");
 
 const issueToken = (business, overrides = {}) =>
   jwt.sign(
@@ -85,36 +78,12 @@ const makeUniqueSlug = async (value, ignoreId = null) => {
   }
 };
 
-const assignEmailVerification = (record) => {
-  const verification = createEmailVerification();
-  record.emailVerified = false;
-  record.emailVerificationTokenHash = verification.tokenHash;
-  record.emailVerificationOtpHash = verification.otpHash;
-  record.emailVerificationExpiresAt = verification.expiresAt;
-  return verification;
-};
-
 const clearEmailVerification = (record) => {
   record.emailVerified = true;
   record.emailVerificationTokenHash = "";
   record.emailVerificationOtpHash = "";
   record.emailVerificationExpiresAt = null;
 };
-
-const sendVerification = ({ email, companyName, token, otp, staffName = "", temporaryPassword = "" }) =>
-  sendVerificationEmail({
-    to: email,
-    companyName,
-    verificationLink: buildVerificationLink(token, email),
-    verificationOtp: otp,
-    staffName,
-    temporaryPassword,
-  }).then((result) => {
-    if (!result?.ok) {
-      throw new Error(result?.error || "Verification email could not be sent.");
-    }
-    return result;
-  });
 
 const normalizeNotificationSettings = (value = {}) => ({
   customerConfirmation: value.customerConfirmation !== false,
@@ -167,15 +136,13 @@ exports.register = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(String(password), 10);
     const finalName = (businessName || name).trim();
     const slug = await makeUniqueSlug(finalName);
-    const verification = createEmailVerification();
-
     const business = await Business.create({
       name: finalName,
       email: normalizedEmail,
-      emailVerified: false,
-      emailVerificationTokenHash: verification.tokenHash,
-      emailVerificationOtpHash: verification.otpHash,
-      emailVerificationExpiresAt: verification.expiresAt,
+      emailVerified: true,
+      emailVerificationTokenHash: "",
+      emailVerificationOtpHash: "",
+      emailVerificationExpiresAt: null,
       password: hashedPassword,
       type: businessType || "Other",
       brandColor: brandColor || "#18c491",
@@ -202,15 +169,9 @@ exports.register = async (req, res, next) => {
       email: normalizedEmail,
       role: "owner",
     });
-    await sendVerification({
-      email: normalizedEmail,
-      companyName: business.name,
-      token: verification.token,
-      otp: verification.otp,
-    });
     return res.status(201).json({
-      requiresEmailVerification: true,
-      message: "Account created. Check your email to verify your account before signing in.",
+      requiresEmailVerification: false,
+      message: "Account created. You can sign in immediately.",
     });
   } catch (error) {
     return next(error);
@@ -228,15 +189,6 @@ exports.login = async (req, res, next) => {
     const normalizedEmail = String(email).toLowerCase().trim();
     const business = await Business.findOne({ email: normalizedEmail });
     if (business) {
-      if (!business.emailVerified) {
-        auditLog("auth.login_blocked", {
-          businessId: String(business._id),
-          email: normalizedEmail,
-          reason: "email_not_verified",
-          actorType: "owner",
-        });
-        return res.status(403).json({ message: "Please verify your email before signing in." });
-      }
       const validPassword = await bcrypt.compare(String(password), business.password);
       if (!validPassword) {
         auditLog("auth.login_failed", { email: normalizedEmail, actorType: "owner" });
@@ -257,17 +209,6 @@ exports.login = async (req, res, next) => {
     if (!staff) {
       auditLog("auth.login_failed", { email: normalizedEmail, actorType: "unknown" });
       return res.status(401).json({ message: "Invalid email or password." });
-    }
-
-    if (!staff.emailVerified) {
-      auditLog("auth.login_blocked", {
-        businessId: String(staff.businessId || ""),
-        staffId: String(staff._id || ""),
-        email: normalizedEmail,
-        reason: "email_not_verified",
-        actorType: "staff",
-      });
-      return res.status(403).json({ message: "Please verify your email before signing in." });
     }
 
     const passwordCheck = await verifyStaffPassword(staff.password, password);
@@ -311,124 +252,49 @@ exports.login = async (req, res, next) => {
 
 exports.verifyEmail = async (req, res, next) => {
   try {
-    const token = String(req.body.token || "").trim();
     const email = String(req.body.email || "").toLowerCase().trim();
-    const otp = String(req.body.otp || "").trim();
-    const now = new Date();
-
-    const businessQuery = token
-      ? {
-          emailVerificationTokenHash: hashEmailVerificationToken(token),
-          emailVerificationExpiresAt: { $gt: now },
-        }
-      : {
-          email,
-          emailVerificationOtpHash: hashEmailVerificationOtp(otp),
-          emailVerificationExpiresAt: { $gt: now },
-        };
-
-    let business = await Business.findOne(businessQuery);
-
-    if (business) {
-      clearEmailVerification(business);
-      await business.save();
-      const authToken = issueToken(business);
-      auditLog("auth.email_verified", {
-        businessId: String(business._id),
-        email: business.email,
-        method: token ? "link" : "otp",
-        actorType: "owner",
-      });
-      sendOwnerWelcomeEmail({ to: business.email, companyName: business.name });
-      return res.status(200).json({
-        ok: true,
-        actorType: "owner",
-        email: business.email,
-        token: authToken,
-        business: toAuthUser(business),
-      });
-    }
-
-    if (token && email) {
-      business = await Business.findOne({ email });
-      if (business?.emailVerified) {
-        const authToken = issueToken(business);
+    if (email) {
+      const business = await Business.findOne({ email });
+      if (business) {
+        clearEmailVerification(business);
+        await business.save();
         return res.status(200).json({
           ok: true,
           actorType: "owner",
           email: business.email,
-          token: authToken,
+          token: issueToken(business),
           business: toAuthUser(business),
+          message: "Email verification is currently disabled.",
         });
       }
-    }
 
-    const staffQuery = token
-      ? {
-          emailVerificationTokenHash: hashEmailVerificationToken(token),
-          emailVerificationExpiresAt: { $gt: now },
-        }
-      : {
-          email,
-          emailVerificationOtpHash: hashEmailVerificationOtp(otp),
-          emailVerificationExpiresAt: { $gt: now },
-        };
-
-    let staff = await Staff.findOne(staffQuery);
-
-    if (!staff && token && email) {
-      staff = await Staff.findOne({ email });
-      if (staff?.emailVerified) {
+      const staff = await Staff.findOne({ email });
+      if (staff) {
+        clearEmailVerification(staff);
+        await staff.save();
         const parentBusiness = await Business.findById(staff.businessId);
         if (!parentBusiness) {
           return res.status(404).json({ message: "Business not found." });
         }
-        const authToken = issueToken(parentBusiness, {
-          role: staff.role || "staff",
-          email: staff.email || parentBusiness.email,
-          staffId: staff._id.toString(),
-          branchId: staff.branchId ? staff.branchId.toString() : null,
-        });
         return res.status(200).json({
           ok: true,
           actorType: "staff",
           email: staff.email,
-          token: authToken,
+          token: issueToken(parentBusiness, {
+            role: staff.role || "staff",
+            email: staff.email || parentBusiness.email,
+            staffId: staff._id.toString(),
+            branchId: staff.branchId ? staff.branchId.toString() : null,
+          }),
           business: toAuthUser(parentBusiness, staff),
+          message: "Email verification is currently disabled.",
         });
       }
     }
 
-    if (!staff) {
-      return res.status(400).json({ message: token ? "Verification link is invalid or has expired." : "Verification code is invalid or has expired." });
-    }
-
-    clearEmailVerification(staff);
-    await staff.save();
-    const parentBusiness = await Business.findById(staff.businessId);
-    if (!parentBusiness) {
-      return res.status(404).json({ message: "Business not found." });
-    }
-    const authToken = issueToken(parentBusiness, {
-      role: staff.role || "staff",
-      email: staff.email || parentBusiness.email,
-      staffId: staff._id.toString(),
-      branchId: staff.branchId ? staff.branchId.toString() : null,
-    });
-    auditLog("auth.email_verified", {
-      businessId: String(staff.businessId),
-      staffId: String(staff._id),
-      email: staff.email,
-      method: token ? "link" : "otp",
-      actorType: "staff",
-    });
-
     return res.status(200).json({
       ok: true,
-      actorType: "staff",
-      email: staff.email,
-      token: authToken,
-      business: toAuthUser(parentBusiness, staff),
+      message: "Email verification is currently disabled.",
     });
   } catch (error) {
     return next(error);
@@ -437,53 +303,10 @@ exports.verifyEmail = async (req, res, next) => {
 
 exports.resendVerificationEmail = async (req, res, next) => {
   try {
-    const email = String(req.body.email || "").toLowerCase().trim();
-    const business = await Business.findOne({ email });
-    if (business) {
-      if (business.emailVerified) {
-        return res.status(200).json({ ok: true, message: "Email is already verified." });
-      }
-      const verification = assignEmailVerification(business);
-      await business.save();
-      await sendVerification({
-        email,
-        companyName: business.name,
-        token: verification.token,
-        otp: verification.otp,
-      });
-      auditLog("auth.verification_resent", {
-        businessId: String(business._id),
-        email,
-        actorType: "owner",
-      });
-      return res.status(200).json({ ok: true, message: "Verification email sent." });
-    }
-
-    const staff = await Staff.findOne({ email });
-    if (!staff) {
-      return res.status(404).json({ message: "Account not found." });
-    }
-    if (staff.emailVerified) {
-      return res.status(200).json({ ok: true, message: "Email is already verified." });
-    }
-
-    const parentBusiness = await Business.findById(staff.businessId).select("name");
-    const verification = assignEmailVerification(staff);
-    await staff.save();
-    await sendVerification({
-      email,
-      companyName: parentBusiness?.name || "ManagelyHQ",
-      token: verification.token,
-      otp: verification.otp,
-      staffName: staff.name,
+    return res.status(200).json({
+      ok: true,
+      message: "Email verification is currently disabled.",
     });
-    auditLog("auth.verification_resent", {
-      businessId: String(staff.businessId),
-      staffId: String(staff._id),
-      email,
-      actorType: "staff",
-    });
-    return res.status(200).json({ ok: true, message: "Verification email sent." });
   } catch (error) {
     return next(error);
   }
