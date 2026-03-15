@@ -7,7 +7,7 @@ const connectDB = require("../database/dbconnection");
 const emailRoutes = require("../router/email.routes");
 const { validateEmailRuntimeConfig } = require("../src/config/runtime");
 
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 dotenv.config();
 
 const parseAllowedOrigins = () =>
