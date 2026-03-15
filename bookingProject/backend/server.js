@@ -30,6 +30,11 @@ const parseAllowedOrigins = () =>
     .map((value) => value.trim())
     .filter(Boolean);
 
+const wait = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
 const createApp = () => {
   const app = express();
   const allowedOrigins = parseAllowedOrigins();
@@ -86,13 +91,31 @@ const createApp = () => {
 const startServer = async () => {
   const app = createApp();
   const port = Number(process.env.PORT || 5000);
+  const maxDbRetries = Number(process.env.DB_CONNECT_MAX_RETRIES || 5);
+  const retryDelayMs = Number(process.env.DB_CONNECT_RETRY_DELAY_MS || 5000);
 
   try {
     validateApiRuntimeConfig();
-    await connectDB();
     app.listen(port, () => {
       console.log(`[api] server running on port ${port}`);
     });
+
+    for (let attempt = 1; attempt <= maxDbRetries; attempt += 1) {
+      try {
+        await connectDB();
+        return;
+      } catch (error) {
+        const isLastAttempt = attempt === maxDbRetries;
+        console.error(`[api] database connection attempt ${attempt}/${maxDbRetries} failed: ${error.message}`);
+
+        if (isLastAttempt) {
+          console.error("[api] database connection retries exhausted. Server will stay up and continue reporting a disconnected database.");
+          return;
+        }
+
+        await wait(retryDelayMs);
+      }
+    }
   } catch (error) {
     console.error(`[api] failed to start: ${error.message}`);
     process.exit(1);
