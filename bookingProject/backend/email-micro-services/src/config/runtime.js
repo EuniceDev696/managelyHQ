@@ -16,8 +16,17 @@ const requireInProduction = (key, message = `${key} is required in production.`)
   }
 };
 
+const warnIfMissing = (key, message) => {
+  if (!readEnv(key)) {
+    warn(message || `${key} is not configured.`);
+  }
+};
+
 const validateEmailRuntimeConfig = () => {
-  requireInProduction("ALLOWED_ORIGINS", "ALLOWED_ORIGINS is required in production so the API can call the email service.");
+  warnIfMissing(
+    "ALLOWED_ORIGINS",
+    "ALLOWED_ORIGINS is not configured. CORS will remain open until you set the API origin.",
+  );
   requireInProduction("EMAIL_SERVICE");
   requireInProduction("EMAIL_USER");
   requireInProduction("EMAIL_PASS");
